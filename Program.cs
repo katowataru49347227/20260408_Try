@@ -122,13 +122,13 @@ class Program
             new Mission("学校の宿題", 20),
             new Mission("計算ドリル", 10),
             new Mission("チャレンジタッチ", 10),
-            new Mission("バイオリンの練習", 20),
+            new Mission("バイオリンの練習", 40),
             new Mission("本を読んだ", 10),
             new Mission("たくさん走った", 10),
             new Mission("ごはんをちゃんと食べた", 10),
             new Mission("明日のしたく", 10),
             new Mission("歯みがき", 5),
-            new Mission("おふろ", 5)
+            new Mission("おふろ", 15)
         };
     }
 
@@ -366,17 +366,35 @@ class Program
         Console.WriteLine("ランキング");
         Console.WriteLine("----------");
 
+        int rank = 0;
+        int previousScore = -1;
+
         for (int i = 0; i < ranking.Count; i++)
         {
             var item = ranking[i];
-            Console.WriteLine($"{i + 1}位: {item.ChildName}  合計点: {item.TotalScore}  記録日数: {item.Days}");
+
+            if (item.TotalScore != previousScore)
+            {
+                rank = i + 1;
+                previousScore = item.TotalScore;
+            }
+
+            Console.WriteLine($"{rank}位: {item.ChildName}  合計点: {item.TotalScore}  記録日数: {item.Days}");
         }
 
         if (ranking.Count >= 2)
         {
             Console.WriteLine();
-            int diff = ranking[0].TotalScore - ranking[1].TotalScore;
-            Console.WriteLine($"差は {diff} 点です。");
+
+            if (ranking[0].TotalScore == ranking[1].TotalScore)
+            {
+                Console.WriteLine("現在トップは同点です。");
+            }
+            else
+            {
+                int diff = ranking[0].TotalScore - ranking[1].TotalScore;
+                Console.WriteLine($"1位と2位の差は {diff} 点です。");
+            }
         }
     }
 
