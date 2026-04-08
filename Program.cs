@@ -13,14 +13,15 @@ class Program
         Console.WriteLine();
 
         string childName = SelectChild();
-        List<string> missions = GetMissions();
+        List<Mission> missions = GetMissions();
         List<MissionResult> results = AskMissions(missions);
 
         int completedCount = CountCompleted(results);
-        string message = CreateMessage(completedCount, missions.Count);
+        int totalScore = CalculateScore(results);
+        string message = CreateMessage(totalScore);
 
-        ShowSummary(childName, results, completedCount, missions.Count, message);
-        SaveToCsv(childName, results);
+        ShowSummary(childName, results, completedCount, missions.Count, totalScore, message);
+        SaveToCsv(childName, results, totalScore);
 
         Console.WriteLine();
         Console.WriteLine("Enterキーを押すと終了します。");
@@ -32,20 +33,20 @@ class Program
         while (true)
         {
             Console.WriteLine("だれの記録をしますか？");
-            Console.WriteLine("1: 兄");
-            Console.WriteLine("2: 弟");
+            Console.WriteLine("1: かける");
+            Console.WriteLine("2: たく");
             Console.Write("番号を入力してください: ");
 
             string? input = Console.ReadLine();
 
             if (input == "1")
             {
-                return "兄";
+                return "かける";
             }
 
             if (input == "2")
             {
-                return "弟";
+                return "たく";
             }
 
             Console.WriteLine("1 か 2 を入力してください。");
@@ -53,24 +54,24 @@ class Program
         }
     }
 
-    static List<string> GetMissions()
+    static List<Mission> GetMissions()
     {
-        return new List<string>
+        return new List<Mission>
         {
-            "学校の宿題",
-            "計算ドリル",
-            "チャレンジタッチ",
-            "バイオリンの練習",
-            "本を読んだ",
-            "たくさん走った",
-            "ごはんをちゃんと食べた",
-            "明日のしたく",
-            "歯みがき",
-            "おふろ"
+            new Mission("学校の宿題", 20),
+            new Mission("計算ドリル", 10),
+            new Mission("チャレンジタッチ", 10),
+            new Mission("バイオリンの練習", 20),
+            new Mission("本を読んだ", 10),
+            new Mission("たくさん走った", 10),
+            new Mission("ごはんをちゃんと食べた", 10),
+            new Mission("明日のしたく", 10),
+            new Mission("歯みがき", 5),
+            new Mission("おふろ", 5)
         };
     }
 
-    static List<MissionResult> AskMissions(List<string> missions)
+    static List<MissionResult> AskMissions(List<Mission> missions)
     {
         var results = new List<MissionResult>();
 
@@ -78,10 +79,10 @@ class Program
         Console.WriteLine("各項目について、やったら y、やっていなければ n を入力してください。");
         Console.WriteLine();
 
-        foreach (string mission in missions)
+        foreach (Mission mission in missions)
         {
-            bool done = AskYesNo($"{mission} はやった？ (y/n): ");
-            results.Add(new MissionResult(mission, done));
+            bool done = AskYesNo($"{mission.Name} はやった？ (y/n): ");
+            results.Add(new MissionResult(mission.Name, mission.Score, done));
         }
 
         return results;
@@ -131,24 +132,39 @@ class Program
         return count;
     }
 
-    static string CreateMessage(int completedCount, int totalCount)
+    static int CalculateScore(List<MissionResult> results)
     {
-        if (completedCount == totalCount)
+        int total = 0;
+
+        foreach (MissionResult result in results)
         {
-            return "すごい！ぜんぶできたね！";
+            if (result.Done)
+            {
+                total += result.Score;
+            }
         }
 
-        if (completedCount >= 8)
+        return total;
+    }
+
+    static string CreateMessage(int totalScore)
+    {
+        if (totalScore >= 90)
+        {
+            return "すごい！最高レベル！";
+        }
+
+        if (totalScore >= 70)
         {
             return "かなりがんばったね！";
         }
 
-        if (completedCount >= 5)
+        if (totalScore >= 50)
         {
             return "よくがんばった！";
         }
 
-        return "明日はもう少しがんばろう！";
+        return "明日はもっとできるよ！";
     }
 
     static void ShowSummary(
@@ -156,25 +172,27 @@ class Program
         List<MissionResult> results,
         int completedCount,
         int totalCount,
+        int totalScore,
         string message)
     {
         Console.WriteLine();
         Console.WriteLine("=== 今日の結果 ===");
         Console.WriteLine($"名前: {childName}");
         Console.WriteLine($"達成: {completedCount} / {totalCount}");
+        Console.WriteLine($"合計点: {totalScore} 点");
         Console.WriteLine();
 
         foreach (MissionResult result in results)
         {
             string mark = result.Done ? "〇" : "×";
-            Console.WriteLine($"{mark} {result.Name}");
+            Console.WriteLine($"{mark} {result.Name} ({result.Score}点)");
         }
 
         Console.WriteLine();
         Console.WriteLine($"メッセージ: {message}");
     }
 
-    static void SaveToCsv(string childName, List<MissionResult> results)
+    static void SaveToCsv(string childName, List<MissionResult> results, int totalScore)
     {
         string filePath = "mission_log.csv";
         bool fileExists = File.Exists(filePath);
@@ -183,7 +201,7 @@ class Program
 
         if (!fileExists)
         {
-            writer.WriteLine("Date,ChildName,Mission,Done");
+            writer.WriteLine("Date,ChildName,Mission,Score,Done,TotalScore");
         }
 
         string today = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -191,7 +209,7 @@ class Program
         foreach (MissionResult result in results)
         {
             string doneValue = result.Done ? "1" : "0";
-            writer.WriteLine($"{today},{childName},{result.Name},{doneValue}");
+            writer.WriteLine($"{today},{childName},{result.Name},{result.Score},{doneValue},{totalScore}");
         }
 
         Console.WriteLine();
@@ -199,14 +217,28 @@ class Program
     }
 }
 
+class Mission
+{
+    public string Name { get; }
+    public int Score { get; }
+
+    public Mission(string name, int score)
+    {
+        Name = name;
+        Score = score;
+    }
+}
+
 class MissionResult
 {
     public string Name { get; }
+    public int Score { get; }
     public bool Done { get; }
 
-    public MissionResult(string name, bool done)
+    public MissionResult(string name, int score, bool done)
     {
         Name = name;
+        Score = score;
         Done = done;
     }
 }
