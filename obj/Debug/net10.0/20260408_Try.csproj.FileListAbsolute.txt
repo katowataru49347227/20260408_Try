@@ -1,0 +1,14 @@
+C:\Users\katow\TryWorks\20260408_Try\bin\Debug\net10.0\20260408_Try.exe
+C:\Users\katow\TryWorks\20260408_Try\bin\Debug\net10.0\20260408_Try.deps.json
+C:\Users\katow\TryWorks\20260408_Try\bin\Debug\net10.0\20260408_Try.runtimeconfig.json
+C:\Users\katow\TryWorks\20260408_Try\bin\Debug\net10.0\20260408_Try.dll
+C:\Users\katow\TryWorks\20260408_Try\bin\Debug\net10.0\20260408_Try.pdb
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.AssemblyInfoInputs.cache
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.AssemblyInfo.cs
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.csproj.CoreCompileInputs.cache
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.dll
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\refint\20260408_Try.dll
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.pdb
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\20260408_Try.genruntimeconfig.cache
+C:\Users\katow\TryWorks\20260408_Try\obj\Debug\net10.0\ref\20260408_Try.dll
