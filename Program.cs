@@ -1,16 +1,81 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 class Program
 {
+    private const string CsvFilePath = "mission_log.csv";
+
     static void Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
 
-        Console.WriteLine("=== おうちミッション記録ツール ===");
+        while (true)
+        {
+            ShowTitle();
+            ShowMenu();
+
+            string choice = ReadMenuChoice();
+
+            if (choice == "1")
+            {
+                RunMissionInput();
+            }
+            else if (choice == "2")
+            {
+                ShowWeeklySummary();
+            }
+            else if (choice == "3")
+            {
+                ShowRanking();
+            }
+            else if (choice == "0")
+            {
+                Console.WriteLine("終了します。");
+                break;
+            }
+            else
+            {
+                Console.WriteLine("メニュー番号を選んでください。");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine("Enterキーでメニューに戻ります。");
+            Console.ReadLine();
+            Console.Clear();
+        }
+    }
+
+    static void ShowTitle()
+    {
+        Console.WriteLine("====================================");
+        Console.WriteLine("   おうちミッション記録ツール");
+        Console.WriteLine("====================================");
         Console.WriteLine();
+    }
+
+    static void ShowMenu()
+    {
+        Console.WriteLine("1. 今日のミッションを入力する");
+        Console.WriteLine("2. 今週の集計を見る");
+        Console.WriteLine("3. かける vs たく のランキングを見る");
+        Console.WriteLine("0. 終了");
+        Console.WriteLine();
+    }
+
+    static string ReadMenuChoice()
+    {
+        Console.Write("番号を入力してください: ");
+        return (Console.ReadLine() ?? "").Trim();
+    }
+
+    static void RunMissionInput()
+    {
+        Console.Clear();
+        ShowTitle();
 
         string childName = SelectChild();
         List<Mission> missions = GetMissions();
@@ -22,10 +87,6 @@ class Program
 
         ShowSummary(childName, results, completedCount, missions.Count, totalScore, message);
         SaveToCsv(childName, results, totalScore);
-
-        Console.WriteLine();
-        Console.WriteLine("Enterキーを押すと終了します。");
-        Console.ReadLine();
     }
 
     static string SelectChild()
@@ -81,7 +142,7 @@ class Program
 
         foreach (Mission mission in missions)
         {
-            bool done = AskYesNo($"{mission.Name} はやった？ (y/n): ");
+            bool done = AskYesNo($"{mission.Name} ({mission.Score}点) はやった？ (y/n): ");
             results.Add(new MissionResult(mission.Name, mission.Score, done));
         }
 
@@ -194,17 +255,16 @@ class Program
 
     static void SaveToCsv(string childName, List<MissionResult> results, int totalScore)
     {
-        string filePath = "mission_log.csv";
-        bool fileExists = File.Exists(filePath);
+        bool fileExists = File.Exists(CsvFilePath);
 
-        using var writer = new StreamWriter(filePath, append: true, Encoding.UTF8);
+        using var writer = new StreamWriter(CsvFilePath, append: true, Encoding.UTF8);
 
         if (!fileExists)
         {
             writer.WriteLine("Date,ChildName,Mission,Score,Done,TotalScore");
         }
 
-        string today = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        string today = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
 
         foreach (MissionResult result in results)
         {
@@ -213,7 +273,163 @@ class Program
         }
 
         Console.WriteLine();
-        Console.WriteLine($"CSV保存しました: {Path.GetFullPath(filePath)}");
+        Console.WriteLine($"CSV保存しました: {Path.GetFullPath(CsvFilePath)}");
+    }
+
+    static void ShowWeeklySummary()
+    {
+        Console.Clear();
+        ShowTitle();
+
+        List<LogRecord> records = LoadCsv();
+
+        if (records.Count == 0)
+        {
+            Console.WriteLine("まだ記録がありません。");
+            return;
+        }
+
+        DateTime startDate = DateTime.Today.AddDays(-6);
+
+        var weekly = records
+            .Where(r => r.Date.Date >= startDate)
+            .GroupBy(r => new { r.ChildName, Day = r.Date.Date })
+            .Select(g => new
+            {
+                ChildName = g.Key.ChildName,
+                Day = g.Key.Day,
+                TotalScore = g.Max(x => x.TotalScore),
+                CompletedCount = g.Count(x => x.Done)
+            })
+            .OrderBy(x => x.Day)
+            .ThenBy(x => x.ChildName)
+            .ToList();
+
+        Console.WriteLine($"今週の集計（{startDate:yyyy-MM-dd} ～ {DateTime.Today:yyyy-MM-dd}）");
+        Console.WriteLine("--------------------------------------------------");
+
+        foreach (var item in weekly)
+        {
+            Console.WriteLine($"{item.Day:MM/dd}  {item.ChildName}  点数: {item.TotalScore}  達成数: {item.CompletedCount}");
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("子どもごとの今週合計");
+        Console.WriteLine("----------------------");
+
+        var childTotals = weekly
+            .GroupBy(x => x.ChildName)
+            .Select(g => new
+            {
+                ChildName = g.Key,
+                TotalScore = g.Sum(x => x.TotalScore)
+            })
+            .OrderByDescending(x => x.TotalScore);
+
+        foreach (var child in childTotals)
+        {
+            Console.WriteLine($"{child.ChildName}: {child.TotalScore} 点");
+        }
+    }
+
+    static void ShowRanking()
+    {
+        Console.Clear();
+        ShowTitle();
+
+        List<LogRecord> records = LoadCsv();
+
+        if (records.Count == 0)
+        {
+            Console.WriteLine("まだ記録がありません。");
+            return;
+        }
+
+        var ranking = records
+            .GroupBy(r => new { r.ChildName, Day = r.Date.Date })
+            .Select(g => new
+            {
+                ChildName = g.Key.ChildName,
+                Day = g.Key.Day,
+                TotalScore = g.Max(x => x.TotalScore)
+            })
+            .GroupBy(x => x.ChildName)
+            .Select(g => new
+            {
+                ChildName = g.Key,
+                TotalScore = g.Sum(x => x.TotalScore),
+                Days = g.Count()
+            })
+            .OrderByDescending(x => x.TotalScore)
+            .ToList();
+
+        Console.WriteLine("ランキング");
+        Console.WriteLine("----------");
+
+        for (int i = 0; i < ranking.Count; i++)
+        {
+            var item = ranking[i];
+            Console.WriteLine($"{i + 1}位: {item.ChildName}  合計点: {item.TotalScore}  記録日数: {item.Days}");
+        }
+
+        if (ranking.Count >= 2)
+        {
+            Console.WriteLine();
+            int diff = ranking[0].TotalScore - ranking[1].TotalScore;
+            Console.WriteLine($"差は {diff} 点です。");
+        }
+    }
+
+    static List<LogRecord> LoadCsv()
+    {
+        var results = new List<LogRecord>();
+
+        if (!File.Exists(CsvFilePath))
+        {
+            return results;
+        }
+
+        string[] lines = File.ReadAllLines(CsvFilePath, Encoding.UTF8);
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            string[] parts = line.Split(',');
+
+            if (parts.Length < 6)
+            {
+                continue;
+            }
+
+            if (!DateTime.TryParse(parts[0], out DateTime date))
+            {
+                continue;
+            }
+
+            string childName = parts[1];
+            string mission = parts[2];
+
+            if (!int.TryParse(parts[3], out int score))
+            {
+                continue;
+            }
+
+            bool done = parts[4] == "1";
+
+            if (!int.TryParse(parts[5], out int totalScore))
+            {
+                continue;
+            }
+
+            results.Add(new LogRecord(date, childName, mission, score, done, totalScore));
+        }
+
+        return results;
     }
 }
 
@@ -240,5 +456,25 @@ class MissionResult
         Name = name;
         Score = score;
         Done = done;
+    }
+}
+
+class LogRecord
+{
+    public DateTime Date { get; }
+    public string ChildName { get; }
+    public string Mission { get; }
+    public int Score { get; }
+    public bool Done { get; }
+    public int TotalScore { get; }
+
+    public LogRecord(DateTime date, string childName, string mission, int score, bool done, int totalScore)
+    {
+        Date = date;
+        ChildName = childName;
+        Mission = mission;
+        Score = score;
+        Done = done;
+        TotalScore = totalScore;
     }
 }
